@@ -1,5 +1,6 @@
 package dev.baseio.efoundation.data.repositories
 
+import android.util.Log
 import dev.baseio.efoundation.domain.StreamingFile
 import dev.baseio.efoundation.domain.repositories.PhotoFetchListener
 import dev.baseio.efoundation.domain.repositories.PhotoFetchRepository
@@ -31,38 +32,38 @@ class PicSumPhotoFetchRepositoryImpl @Inject constructor(
     fileDownloadListener = null
   }
 
-  override suspend fun fetchPhoto(url: String) =
+  override suspend fun fetchPhoto(url: String): Unit =
     withContext(coroutineContext) {
       try {
-        val file = fileCreationService.createFile()
+        val file = fileCreationService.getTempFile()
         val response: HttpResponse = networkClient.get(url) {
           onDownload { bytesSentTotal, contentLength ->
-            prepareCallback(bytesSentTotal, contentLength, file)
+            Log.d(this.javaClass.name,"${bytesSentTotal}/${contentLength}")
+            prepareCallback(bytesSentTotal, file)
           }
         }
         val bytes = response.receive<ByteArray>()
         file.writeBytes(bytes)
-        fileDownloadListener?.onComplete()
-        StreamingFile(
-          100.0,
-          file
+        fileDownloadListener?.onReceive(
+          StreamingFile(
+            file.length(),
+            file, isComplete = true
+          )
         )
+        fileDownloadListener?.onComplete()
       } catch (ex: Exception) {
         fileDownloadListener?.onFailed(ex)
-        null
       }
     }
 
   private fun prepareCallback(
     bytesSentTotal: Long,
-    contentLength: Long,
     file: File
   ) {
-    val progress: Double = (bytesSentTotal / contentLength).times(100.0)
     fileDownloadListener?.onReceive(
       StreamingFile(
-        progress,
-        file
+        bytesSentTotal,
+        file, isComplete = false
       )
     )
   }

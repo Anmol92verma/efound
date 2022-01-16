@@ -18,10 +18,6 @@ import kotlin.coroutines.cancellation.CancellationException
 class FetchRandomPhotoUseCase(private val photoFetchRepository: PhotoFetchRepository) :
   BaseStreamingUseCase<String, StreamingFile> {
 
-  override suspend fun perform(input: String?): StreamingFile? {
-    return photoFetchRepository.fetchPhoto(input ?: PIC_SUM_URL)
-  }
-
   override fun performStreaming(input: String?): Flow<StreamingFile> {
     return callbackFlow {
       val listener = photoFetchListener()
@@ -49,4 +45,8 @@ class FetchRandomPhotoUseCase(private val photoFetchRepository: PhotoFetchReposi
         channel.close()
       }
     }
+
+  override suspend fun perform(input: String?): StreamingFile? {
+    TODO("Not yet implemented")
+  }
 }

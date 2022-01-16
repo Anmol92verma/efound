@@ -6,7 +6,7 @@ import java.io.File
 import javax.inject.Inject
 
 class RandomFileServiceImpl @Inject constructor(private val context: Context) : RandomFileService {
-  override fun createFile(): File {
+  override fun getTempFile(): File {
     return File(context.filesDir, "random")
   }
 }
