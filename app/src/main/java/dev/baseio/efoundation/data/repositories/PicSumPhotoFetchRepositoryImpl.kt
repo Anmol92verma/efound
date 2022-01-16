@@ -36,25 +36,34 @@ class PicSumPhotoFetchRepositoryImpl @Inject constructor(
     withContext(coroutineContext) {
       try {
         val file = fileCreationService.getTempFile()
-        val response: HttpResponse = networkClient.get(url) {
-          onDownload { bytesSentTotal, contentLength ->
-            Log.d(this.javaClass.name,"${bytesSentTotal}/${contentLength}")
-            prepareCallback(bytesSentTotal, file)
-          }
-        }
+        val response: HttpResponse = responseWithListener(url, file)
         val bytes = response.receive<ByteArray>()
         file.writeBytes(bytes)
-        fileDownloadListener?.onReceive(
-          StreamingFile(
-            file.length(),
-            file, isComplete = true
-          )
-        )
-        fileDownloadListener?.onComplete()
+        notifyFileDownloaded(file)
       } catch (ex: Exception) {
         fileDownloadListener?.onFailed(ex)
       }
     }
+
+  private fun notifyFileDownloaded(file: File) {
+    fileDownloadListener?.onReceive(
+      StreamingFile(
+        file.length(),
+        file, isComplete = true
+      )
+    )
+    fileDownloadListener?.onComplete()
+  }
+
+  private suspend fun responseWithListener(
+    url: String,
+    file: File
+  ): HttpResponse = networkClient.get(url) {
+    onDownload { bytesSentTotal, contentLength ->
+      Log.d(this.javaClass.name, "${bytesSentTotal}/${contentLength}")
+      prepareCallback(bytesSentTotal, file)
+    }
+  }
 
   private fun prepareCallback(
     bytesSentTotal: Long,

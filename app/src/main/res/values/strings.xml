@@ -4,5 +4,7 @@
     <string name="except_file_not_found">Could not save the image, FileNotFound!</string>
     <string name="downloaded_glue">Downloaded Size %d bytes</string>
     <string name="downloading_glue">Downloading %d bytes</string>
+    <string name="except_no_network">No network available!</string>
+    <string name="except_generic">Some error occurred</string>
 
 </resources>

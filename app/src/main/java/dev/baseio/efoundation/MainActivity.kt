@@ -16,6 +16,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.baseio.efoundation.databinding.ViewRandomPhotosBinding
 import dev.baseio.efoundation.domain.StreamingFile
 import java.io.FileNotFoundException
+import java.net.UnknownHostException
+import kotlin.coroutines.cancellation.CancellationException
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -43,10 +45,21 @@ class MainActivity : AppCompatActivity() {
         setImageForFile(randomPhotoViewState.result)
       }
       is RandomViewModel.RandomPhotoViewState.Exception -> {
+        randomPhotoViewState.throwable.printStackTrace()
         Log.e(this.javaClass.name, randomPhotoViewState.throwable.message ?: "")
         when (randomPhotoViewState.throwable) {
           is FileNotFoundException -> {
             showSnackbarMessage(getString(R.string.except_file_not_found))
+          }
+          is CancellationException -> {
+            when (randomPhotoViewState.throwable.cause) {
+              is UnknownHostException -> {
+                showSnackbarMessage(getString(R.string.except_no_network))
+              }
+              else -> {
+                showSnackbarMessage(getString(R.string.except_generic))
+              }
+            }
           }
           else -> {
             showSnackbarMessage(randomPhotoViewState.throwable.message ?: "")

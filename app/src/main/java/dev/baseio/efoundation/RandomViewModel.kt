@@ -9,14 +9,16 @@ import dev.baseio.efoundation.domain.StreamingFile
 import dev.baseio.efoundation.domain.repositories.RandomFileService
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class RandomViewModel @Inject constructor(
   private val fetchPhotoUseCase: FetchRandomPhotoUseCase,
-  randomFileService: RandomFileService
+  private val randomFileService: RandomFileService
 ) :
   ViewModel() {
   private var fetchJob: Job? = null
@@ -25,11 +27,17 @@ class RandomViewModel @Inject constructor(
   )
 
   init {
-    val file = randomFileService.getTempFile()
-    val initialState = RandomPhotoViewState.Empty(
-      StreamingFile(file.length(), file, true)
-    )
-    viewState.value = initialState
+    initialState()
+  }
+
+  private fun initialState() {
+    viewModelScope.launch {
+      val file = randomFileService.getTempFile()
+      val initialState = RandomPhotoViewState.Empty(
+        StreamingFile(file.length(), file, true)
+      )
+      viewState.value = initialState
+    }
   }
 
   val randomViewState: LiveData<RandomPhotoViewState> = viewState
@@ -42,7 +50,7 @@ class RandomViewModel @Inject constructor(
   fun fetchRandomPhoto() {
     fetchJob?.cancel()
     fetchJob = viewModelScope.launch(exceptionHandler) {
-      fetchPhotoUseCase.performStreaming().collectLatest { streamingFile ->
+      fetchPhotoUseCase.performStreaming().handleErrors().collect { streamingFile ->
         viewState.value = RandomPhotoViewState.Streaming(streamingFile)
       }
     }
@@ -52,5 +60,13 @@ class RandomViewModel @Inject constructor(
     class Exception(val throwable: Throwable) : RandomPhotoViewState()
     class Streaming(val result: StreamingFile) : RandomPhotoViewState()
     class Empty(val result: StreamingFile?) : RandomPhotoViewState()
+  }
+
+  private fun <T> Flow<T>.handleErrors(): Flow<T> = flow {
+    try {
+      collect { value -> emit(value) }
+    } catch (e: Throwable) {
+      viewState.value = RandomPhotoViewState.Exception(e)
+    }
   }
 }
